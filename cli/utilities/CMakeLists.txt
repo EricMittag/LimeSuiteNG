@@ -8,3 +8,13 @@ add_executable(frontendDelayTest frontendDelayTest.cpp)
 set_target_properties(frontendDelayTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 target_link_libraries(frontendDelayTest PRIVATE cli-shared)
 target_precompile_headers(frontendDelayTest REUSE_FROM cli-shared)
+
+add_executable(streamTimingTest streamTimingTest.cpp)
+set_target_properties(streamTimingTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+target_link_libraries(streamTimingTest PRIVATE cli-shared)
+target_precompile_headers(streamTimingTest REUSE_FROM cli-shared)
+
+add_executable(scheduledBurstTimingTest scheduledBurstTimingTest.cpp)
+set_target_properties(scheduledBurstTimingTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+target_link_libraries(scheduledBurstTimingTest PRIVATE cli-shared)
+target_precompile_headers(scheduledBurstTimingTest REUSE_FROM cli-shared)
