@@ -519,6 +519,8 @@ void LA9310_TRX::ReceivePacketsLoop()
     assert(fifo->empty());
 
     uint64_t timestamp = 0;
+    uint64_t batchTimestamp = 0;
+    bool batchTimestampValid = false;
 
     uint64_t bytesCached[4] = { 0, 0, 0, 0 };
     while (mRx.terminate.load(std::memory_order_relaxed) == false)
@@ -529,6 +531,11 @@ void LA9310_TRX::ReceivePacketsLoop()
             const uint32_t vspa_ch = la9310->vspa.api_channel_remap(c);
             size_received =
                 vspa.Receive(vspa_ch, reinterpret_cast<uint32_t*>(&rxbuffer[c][bytesCached[c] / 4]), readSize, &timestamp);
+            if (c == mConfig.channels.at(TRXDir::Rx).front() && size_received != 0 && bytesCached[c] == 0)
+            {
+                batchTimestamp = timestamp;
+                batchTimestampValid = true;
+            }
             bytesCached[c] += size_received;
             Bps += size_received;
         }
@@ -589,7 +596,7 @@ void LA9310_TRX::ReceivePacketsLoop()
             }
             outputPkt->Reset();
             assert(mConfig.hintSampleRate > 0);
-            outputPkt->meta.timestamp = Timespec(0, timestamp, mConfig.hintSampleRate);
+            outputPkt->meta.timestamp = Timespec(0, batchTimestampValid ? batchTimestamp : timestamp, mConfig.hintSampleRate);
         }
 
         const int samplesProduced = bytesCached[mConfig.channels.at(TRXDir::Rx).front()] / sizeof(complex16_t);
@@ -630,6 +637,7 @@ void LA9310_TRX::ReceivePacketsLoop()
         outputPkt->samples.SetSize(outputPkt->samples.size() + samplesProduced);
 
         memset(bytesCached, 0, sizeof(bytesCached));
+        batchTimestampValid = false;
         // bytesCached = 0;
 
         stats.timestamp = timestamp + samplesProduced;
