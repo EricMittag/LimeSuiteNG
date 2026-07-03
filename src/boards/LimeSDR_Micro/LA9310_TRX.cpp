@@ -177,7 +177,9 @@ OpStatus LA9310_TRX::Setup(const StreamConfig& cfg)
         tx_dma_allowed.TriggerDirectly(PHYTimerControl::TriggerLogic::ForceZero);
         la9310->vspa.TxEnable(false, false);
     }
-    // vspa.ClearStats();
+    status = la9310->vspa.ClearStats();
+    if (status != OpStatus::Success)
+        return status;
 
     return status;
 }

@@ -527,9 +527,19 @@ OpStatus VSPA_iqplayer::ClearStats()
     uint32_t loword = 0;
     uint64_t value = (uint64_t(hiword) << 32) | loword;
 
-    vspa_dmem_proxy_wo->data_flow.tx.produced = 0;
-    return OpStatus::Success;
-    //return mailbox->Message(vspa_cpu_id, vspa_mbox_id, value);
+    for (auto& rx : mRx)
+    {
+        rx.bytes_consumed = 0;
+        rx.bytes_produced = 0;
+        rx.last_consumed = 0;
+        rx.last_produced = 0;
+    }
+    mTx.bytes_consumed = 0;
+    mTx.bytes_produced = 0;
+    mTx.last_consumed = 0;
+    mTx.last_produced = 0;
+
+    return mailbox->Message(vspa_cpu_id, vspa_mbox_id, value);
 }
 
 OpStatus VSPA_iqplayer::SetDCOffset(complex16_t offset)

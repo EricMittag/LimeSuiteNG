@@ -177,27 +177,32 @@ static vspa_state_t GetProxy(std::shared_ptr<LA9310_PCIe> pcie)
     return proxy;
 }
 
+static uint32_t GetDisplayDelta(uint32_t current, uint32_t previous)
+{
+    return current >= previous ? current - previous : 0;
+}
+
 static void print_pipeline_tx(const tx_pipeline_t& pipe, const tx_pipeline_t& last_pipe)
 {
     printf("Tx pipeline:\n");
-    uint32_t adc_rate = pipe.dac.output.bytes_done - last_pipe.dac.output.bytes_done;
+    uint32_t adc_rate = GetDisplayDelta(pipe.dac.output.bytes_done, last_pipe.dac.output.bytes_done);
     printf("DAC | enq:%08X done:%08X, rate:%8u\n", pipe.dac.input.bytes_done, pipe.dac.output.bytes_done, adc_rate);
-    uint32_t qec_rate = pipe.qec.output.bytes_done - last_pipe.qec.output.bytes_done;
+    uint32_t qec_rate = GetDisplayDelta(pipe.qec.output.bytes_done, last_pipe.qec.output.bytes_done);
     printf("QEC | enq:%08X done:%08X, rate:%8u\n", pipe.qec.input.bytes_done, pipe.qec.output.bytes_done, qec_rate);
     printf("INT | enq:%08X done:%08X\n", pipe.interp.input.bytes_done, pipe.interp.output.bytes_done);
-    uint32_t ddr_rate = pipe.ddr.output.bytes_done - last_pipe.ddr.output.bytes_done;
+    uint32_t ddr_rate = GetDisplayDelta(pipe.ddr.output.bytes_done, last_pipe.ddr.output.bytes_done);
     printf("DDR | enq:%08X done:%08X, rate:%8u\n", pipe.ddr.input.bytes_done, pipe.ddr.output.bytes_done, ddr_rate);
 }
 
 static void print_pipeline_rx(const rx_pipeline_t& pipe, const rx_pipeline_t& last_pipe)
 {
     printf("Rx pipeline:\n");
-    uint32_t adc_rate = pipe.adc.output.bytes_done - last_pipe.adc.output.bytes_done;
+    uint32_t adc_rate = GetDisplayDelta(pipe.adc.output.bytes_done, last_pipe.adc.output.bytes_done);
     printf("ADC | enq:%08X done:%08X, rate:%8u\n", pipe.adc.input.bytes_done, pipe.adc.output.bytes_done, adc_rate);
-    uint32_t qec_rate = pipe.qec.output.bytes_done - last_pipe.qec.output.bytes_done;
+    uint32_t qec_rate = GetDisplayDelta(pipe.qec.output.bytes_done, last_pipe.qec.output.bytes_done);
     printf("QEC | enq:%08X done:%08X, rate:%8u\n", pipe.qec.input.bytes_done, pipe.qec.output.bytes_done, qec_rate);
     printf("DEC | enq:%08X done:%08X\n", pipe.dec.input.bytes_done, pipe.dec.output.bytes_done);
-    uint32_t ddr_rate = pipe.ddr.output.bytes_done - last_pipe.ddr.output.bytes_done;
+    uint32_t ddr_rate = GetDisplayDelta(pipe.ddr.output.bytes_done, last_pipe.ddr.output.bytes_done);
     printf("DDR | enq:%08X done:%08X, rate:%8u\n", pipe.ddr.input.bytes_done, pipe.ddr.output.bytes_done, ddr_rate);
 }
 
@@ -317,7 +322,7 @@ static void print_flow_controls(const vspa_state_t& proxy, const vspa_state_t& l
     const struct flow_control* last_flow = &last_proxy.data_flow.tx;
     printf("\nRate:   \t");
     for (int i = 0; i < 5; ++i)
-        printf("%8u\t", flow[i].produced - last_flow[i].produced);
+        printf("%8u\t", GetDisplayDelta(flow[i].produced, last_flow[i].produced));
     printf("\nProduce:\t");
     for (int i = 0; i < 5; ++i)
         printf("%08X\t", flow[i].produced);
@@ -427,8 +432,9 @@ int main(int argc, char* argv[])
 
     signal(SIGINT, intHandler);
 
-    vspa_state_t last_proxy;
-    vspa_state_t proxy;
+    vspa_state_t last_proxy{};
+    vspa_state_t proxy{};
+    bool haveProxyBaseline = false;
 
     PHYTimer phytimer(pcie);
 
@@ -444,6 +450,11 @@ int main(int argc, char* argv[])
         else
         {
             proxy = GetProxy(pcie);
+            if (!haveProxyBaseline)
+            {
+                last_proxy = proxy;
+                haveProxyBaseline = true;
+            }
             print_proxy(proxy, last_proxy, args::get(channel));
             la9310_hexdump_dma(pcie);
             if (gpio)
