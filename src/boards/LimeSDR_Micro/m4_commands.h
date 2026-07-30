@@ -27,6 +27,8 @@ enum M4_Command {
     LIME_M4_DIGITAL_LOOPBACK,
 
     LIME_M4_TX_CONTROL,
+
+    LIME_M4_VSPA_DBG,
 };
 
 struct tx_dac_allowed_payload {
